@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  'Trillioner' token contract
 //
-// Symbol      : Trillioner
+// Symbol      : TLC
 // Name        : Trillioner
 // Total supply: 1,000,000,000
 // Decimals    : 18
@@ -360,7 +360,7 @@ contract Trillioner is Context, IERC20, Ownable {
 
   constructor() public {
     _name = "Trillioner";
-    _symbol = "Trillioner";
+    _symbol = "TLC";
     _decimals = 18;
     _totalSupply = 1000000000 * 10 ** uint256(_decimals);
     _balances[msg.sender] = _totalSupply;

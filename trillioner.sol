@@ -7,7 +7,7 @@
 // Decimals    : 18
 // ----------------------------------------------------------------------------
 
-pragma solidity 0.5.16;
+pragma solidity 0.6.5;
 
 interface IERC20 {
   /**
@@ -356,7 +356,7 @@ contract Trillioner is Context, IERC20, Ownable {
   uint8 private _decimals;
   string private _symbol;
   string private _name;
-  uint256 private  _cap;
+  uint256  private immutable _cap;
 
   constructor() public {
     _name = "Trillioner";
@@ -373,7 +373,7 @@ contract Trillioner is Context, IERC20, Ownable {
         uint256 startTime;
         uint256 initialLock;
         uint256 lockedToken;
-        uint256 remainedToken;
+        uint256 remainingToken;
         uint256 monthCount;
         uint256 openingPercentage;
     }
@@ -383,42 +383,42 @@ contract Trillioner is Context, IERC20, Ownable {
   /**
    * @dev Returns the BEP20 token owner.
    */
-  function getOwner() external view returns (address) {
+  function getOwner() external override view returns (address) {
     return owner();
   }
 
   /**
    * @dev Returns the token decimals.
    */
-  function decimals() external view returns (uint8) {
+  function decimals() external override view returns (uint8) {
     return _decimals;
   }
 
   /**
    * @dev Returns the token symbol.
    */
-  function symbol() external view returns (string memory) {
+  function symbol() external override view returns (string memory) {
     return _symbol;
   }
 
   /**
   * @dev Returns the token name.
   */
-  function name() external view returns (string memory) {
+  function name() external view override returns (string memory) {
     return _name;
   }
 
   /**
    * @dev See {BEP20-totalSupply}.
    */
-  function totalSupply() external view returns (uint256) {
+  function totalSupply() external override view returns (uint256) {
     return _totalSupply;
   }
 
   /**
    * @dev See {BEP20-balanceOf}.
    */
-  function balanceOf(address account) public view returns (uint256) {
+  function balanceOf(address account) override public view returns (uint256) {
     return _balances[account];
   }
 
@@ -431,7 +431,7 @@ contract Trillioner is Context, IERC20, Ownable {
    * - `recipient` cannot be the zero address.
    * - the caller must have a balance of at least `amount`.
    */
-  function transfer(address recipient, uint256 amount) external returns (bool) {
+  function transfer(address recipient, uint256 amount) override external returns (bool) {
     _transfer(_msgSender(), recipient, amount);
     return true;
   }
@@ -439,7 +439,7 @@ contract Trillioner is Context, IERC20, Ownable {
   /**
    * @dev See {BEP20}.
    */
-  function allowance(address owner, address spender) external view returns (uint256) {
+  function allowance(address owner, address spender) override external view returns (uint256) {
     return _allowances[owner][spender];
   }
 
@@ -450,7 +450,7 @@ contract Trillioner is Context, IERC20, Ownable {
    *
    * - `spender` cannot be the zero address.
    */
-  function approve(address spender, uint256 amount) external returns (bool) {
+  function approve(address spender, uint256 amount) override external returns (bool) {
     _approve(_msgSender(), spender, amount);
     return true;
   }
@@ -467,7 +467,7 @@ contract Trillioner is Context, IERC20, Ownable {
    * - the caller must have allowance for `sender`'s tokens of at least
    * `amount`.
    */
-  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
+  function transferFrom(address sender, address recipient, uint256 amount) override external returns (bool) {
     _transfer(sender, recipient, amount);
     _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "BEP20: transfer amount exceeds allowance"));
     return true;
@@ -546,7 +546,7 @@ contract Trillioner is Context, IERC20, Ownable {
     require(sender != recipient, "Invalid target");
 
     if (locks[sender].lockedToken > 0) {
-            uint256 withdrawable = balanceOf(sender) - locks[sender].remainedToken;
+            uint256 withdrawable = balanceOf(sender) - locks[sender].remainingToken;
             require(amount <= withdrawable,"Not enough Unlocked token Available");
     }
     
@@ -558,19 +558,19 @@ contract Trillioner is Context, IERC20, Ownable {
 
     /**
      * @dev it unlocks token from vesting period ,
-     * locked token for initially for initial days than unlock 20% of locked token every month
-     */
+     * locked token for initially for initial days than unlock *openingPercentage of locked token every month
+     */ 
 
     function unlock(address target_) external {
         require(target_ != address(0), "Target address can not be zero address");
         uint256 startTime = locks[target_].startTime;
         uint256 lockedToken = locks[target_].lockedToken;
-        uint256 remainedToken = locks[target_].remainedToken;
+        uint256 remainingToken = locks[target_].remainingToken;
         uint256 monthCount = locks[target_].monthCount;
         uint256 initialLock = locks[target_].initialLock;
         uint256 openingPercentage = locks[target_].openingPercentage;
         
-        require(remainedToken != 0, "All tokens are unlocked");
+        require(remainingToken != 0, "All tokens are unlocked");
 
         require(
             block.timestamp > startTime + (initialLock * 1 days),
@@ -585,18 +585,18 @@ contract Trillioner is Context, IERC20, Ownable {
         
         if(monthNumber>installment) monthNumber=installment;
 
-        uint256 remainedMonth = monthNumber - monthCount;
+        uint256 remainingMonth = monthNumber - monthCount;
 
-        if (remainedMonth > installment) remainedMonth = installment;
-        require(remainedMonth > 0, "Releasable token till now is released");
+       if (remainingMonth > installment) remainingMonth = installment;
+        require(remainingMonth > 0, "Releasable token till now is released");
 
-        uint256 receivableToken = (lockedToken * (remainedMonth * openingPercentage)) / 100;
+        uint256 receivableToken = (lockedToken * (remainingMonth * openingPercentage)) / 100;
 
-        locks[target_].monthCount += remainedMonth;   
-        remainedToken -= receivableToken;
-        locks[target_].remainedToken = remainedToken;
+        locks[target_].monthCount += remainingMonth;   
+        remainingToken -= receivableToken;
+        locks[target_].remainingToken = remainingToken;
 
-        if (locks[target_].remainedToken == 0) {
+        if (locks[target_].remainingToken == 0) {
             delete locks[target_];
         }
     }
@@ -604,7 +604,7 @@ contract Trillioner is Context, IERC20, Ownable {
 
     /** @dev Transfer with lock
      * @param recipient The recipient address.
-     * @param tAmount Amount that has to be locked (without decimals)
+     * @param tAmount Amount that has to be locked (with decimals)
      * @param initialLock duration in days for locking
      */
 
@@ -619,8 +619,10 @@ contract Trillioner is Context, IERC20, Ownable {
             locks[recipient].lockedToken == 0,
             "This address is already in vesting period"
         );
-       //decimals are added to the amount
-       //Be carefull to not to transfer too much tokens
+        require(
+            uint256(100) % openingPercentage == 0,
+            "Invalid openingPercentage, accepts only ( 1, 2, 4, 5, 10, 20, 25, 50)"
+        );
         _transfer(_msgSender(), recipient, tAmount);
         locks[recipient] = LockDetails(
             block.timestamp,
